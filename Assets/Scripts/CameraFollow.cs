@@ -1,36 +1,36 @@
 using UnityEngine;
 
 /// <summary>
-/// Kamera third person sederhana yang mengikuti target dari jarak tetap.
+/// A simple third person camera that trails a target at a fixed offset.
 ///
-/// Tidak mengikuti rotasi target, karena Player pada praktikum ini
-/// hanya bergeser tanpa berputar. Dengan begitu arah WASD tetap
-/// konsisten terhadap layar.
+/// It deliberately ignores the target's rotation, since the Player in this
+/// project slides around without turning. That keeps the WASD directions
+/// consistent with what is on screen.
 /// </summary>
 public class CameraFollow : MonoBehaviour
 {
     [Header("Target")]
     [SerializeField]
-    [Tooltip("Object yang diikuti kamera. Drag Player dari Hierarchy.")]
+    [Tooltip("Object the camera follows. Drag the Player here.")]
     private Transform target;
 
-    [Header("Posisi")]
+    [Header("Placement")]
     [SerializeField]
-    [Tooltip("Jarak kamera terhadap target. Y = tinggi, Z negatif = di belakang.")]
+    [Tooltip("Offset from the target. Y is height, negative Z sits behind it.")]
     private Vector3 offset = new Vector3(0f, 9f, -9f);
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Waktu peredaman gerak kamera. 0 = kaku, semakin besar semakin lembut.")]
+    [Tooltip("Damping time for the camera. 0 is rigid, larger is softer.")]
     private float smoothTime = 0.2f;
 
-    [Header("Arah Pandang")]
+    [Header("Aim")]
     [SerializeField]
-    [Tooltip("Arahkan kamera ke target setiap frame.")]
+    [Tooltip("Point the camera at the target every frame.")]
     private bool lookAtTarget = true;
 
     [SerializeField]
-    [Tooltip("Geser titik pandang ke atas agar target tidak berada di tepi bawah layar.")]
+    [Tooltip("Raises the aim point so the target does not sit at the bottom edge.")]
     private Vector3 lookAtOffset = new Vector3(0f, 1f, 0f);
 
     private Vector3 currentVelocity;
@@ -40,34 +40,34 @@ public class CameraFollow : MonoBehaviour
         if (target == null)
         {
             Debug.LogError(
-                "[CameraFollow] Field 'target' belum diisi. " +
-                "Drag object Player ke Inspector Main Camera.", this);
+                "[CameraFollow] The 'target' field is empty. " +
+                "Drag the Player object into the Main Camera Inspector.", this);
             return;
         }
 
-        // Bila script terpasang pada object yang sama dengan target,
-        // object itu akan mengejar posisinya sendiri ditambah offset
-        // sehingga melayang menjauh tanpa henti.
+        // If this script sits on the same object as its target, that object
+        // ends up chasing its own position plus the offset and drifts away
+        // forever.
         if (target == transform)
         {
             Debug.LogError(
-                "[CameraFollow] Target tidak boleh object ini sendiri. " +
-                "Script ini seharusnya dipasang pada Main Camera, " +
-                "bukan pada Player.", this);
+                "[CameraFollow] The target cannot be this object itself. " +
+                "This script belongs on the Main Camera, not on the Player.",
+                this);
             enabled = false;
             return;
         }
 
-        // Tempatkan kamera langsung di posisi akhir supaya tidak
-        // terlihat meluncur dari titik awal saat Play ditekan.
+        // Start already in place, so the camera does not glide in from the
+        // origin when Play is pressed.
         transform.position = target.position + offset;
         AimAtTarget();
     }
 
     /// <summary>
-    /// LateUpdate dipakai agar kamera bergerak setelah Player selesai
-    /// berpindah pada frame ini. Bila memakai Update, kamera bisa
-    /// tampak bergetar karena mengejar posisi frame sebelumnya.
+    /// LateUpdate runs after the Player has finished moving this frame.
+    /// Using Update instead would make the camera chase last frame's
+    /// position, which reads as jitter.
     /// </summary>
     private void LateUpdate()
     {

@@ -1,9 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// State Enemy, diurutkan dari paling tenang ke paling waspada.
-/// Tiga state ini membentuk finite state machine paling sederhana:
-/// transisinya ditentukan sepenuhnya oleh jarak ke Player.
+/// Enemy states, ordered from calm to fully aware.
+/// Together they form the simplest kind of finite state machine:
+/// every transition is decided by the distance to the Player.
 /// </summary>
 public enum EnemyState
 {
@@ -13,112 +13,112 @@ public enum EnemyState
 }
 
 /// <summary>
-/// Seberapa sering perubahan kondisi dicatat ke Console.
+/// How often state information is written to the Console.
 /// </summary>
 public enum DetectorLogMode
 {
-    /// <summary>Tidak mencatat apa pun.</summary>
+    /// <summary>Log nothing.</summary>
     Off,
 
-    /// <summary>Mencatat hanya saat state berpindah. Pilihan yang dianjurkan.</summary>
+    /// <summary>Log only when the state changes. Recommended.</summary>
     OnStateChange,
 
     /// <summary>
-    /// Mencatat jarak setiap frame. Berguna untuk memeriksa perhitungan
-    /// perception, tetapi membanjiri Console dan membebani performa.
-    /// Nyalakan hanya sementara saat sedang menelusuri masalah.
+    /// Log the distance on every frame. Useful while checking the
+    /// perception math, but it floods the Console and costs performance.
+    /// Turn it on only while tracking down a problem.
     /// </summary>
     EveryFrame
 }
 
 /// <summary>
-/// AI sederhana: Perception - Decision - Action.
+/// A minimal AI agent built around Perception - Decision - Action.
 ///
-/// Perception : menghitung jarak Enemy ke Player.
-/// Decision   : membandingkan jarak dengan dua parameter radius.
-/// Action     : mengubah warna Point Light sesuai state.
+/// Perception : measures the distance from the Enemy to the Player.
+/// Decision   : compares that distance against two radius parameters.
+/// Action     : recolors the Point Light to match the resulting state.
 /// </summary>
 public class EnemyDetector : MonoBehaviour
 {
     [Header("Perception")]
     [SerializeField]
-    [Tooltip("Referensi Transform Player. Drag object Player dari Hierarchy.")]
+    [Tooltip("Reference to the Player Transform. Drag the Player object here.")]
     private Transform player;
 
-    [Header("Parameter AI")]
+    [Header("AI Parameters")]
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Jarak terluar. Player di dalamnya membuat Enemy menjadi Suspicious.")]
+    [Tooltip("Outer radius. A Player inside it makes the Enemy Suspicious.")]
     private float suspiciousRadius = 8f;
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Jarak terdalam. Player di dalamnya membuat Enemy menjadi Alert.")]
+    [Tooltip("Inner radius. A Player inside it makes the Enemy Alert.")]
     private float alertRadius = 4f;
 
     [Header("Action")]
     [SerializeField]
-    [Tooltip("Point Light anak dari Enemy. Warnanya berubah mengikuti state.")]
+    [Tooltip("Point Light attached under the Enemy. Its color follows the state.")]
     private Light enemyLight;
 
     [SerializeField]
-    [Tooltip("Warna saat Player berada di luar semua radius.")]
+    [Tooltip("Color used while the Player is outside both radii.")]
     private Color idleColor = Color.blue;
 
     [SerializeField]
-    [Tooltip("Warna saat Player berada di antara alertRadius dan suspiciousRadius.")]
+    [Tooltip("Color used while the Player is between the two radii.")]
     private Color suspiciousColor = Color.yellow;
 
     [SerializeField]
-    [Tooltip("Warna saat Player berada di dalam alertRadius.")]
+    [Tooltip("Color used while the Player is inside the alert radius.")]
     private Color alertColor = Color.red;
 
     [Header("Debug (read only)")]
     [SerializeField]
-    [Tooltip("Jarak Enemy ke Player pada frame ini.")]
+    [Tooltip("Distance to the Player on this frame.")]
     private float currentDistance;
 
     [SerializeField]
-    [Tooltip("State Enemy pada frame ini.")]
+    [Tooltip("Enemy state on this frame.")]
     private EnemyState currentState = EnemyState.Idle;
 
     [SerializeField]
-    [Tooltip("Seberapa sering Console mencatat. EveryFrame hanya untuk penelusuran sementara.")]
-    private DetectorLogMode logMode = DetectorLogMode.EveryFrame;
-
-    /// <summary>
-    /// State terkini, dibaca oleh komponen lain seperti EnemyPatrol.
-    /// </summary>
-    public EnemyState CurrentState => currentState;
+    [Tooltip("How often to log. EveryFrame is meant for short debugging sessions only.")]
+    private DetectorLogMode logMode = DetectorLogMode.OnStateChange;
 
     [Header("Gizmos")]
     [SerializeField]
-    [Tooltip("Tampilkan radius deteksi walau Enemy tidak sedang dipilih.")]
+    [Tooltip("Draw the detection radii even when the Enemy is not selected.")]
     private bool alwaysDrawGizmos = true;
+
+    /// <summary>
+    /// Current state, read by other components such as EnemyPatrol.
+    /// </summary>
+    public EnemyState CurrentState => currentState;
 
     private void Start()
     {
         if (player == null)
         {
             Debug.LogError(
-                "[EnemyDetector] Field 'player' belum diisi. " +
-                "Drag object Player ke Inspector Enemy.", this);
+                "[EnemyDetector] The 'player' field is empty. " +
+                "Drag the Player object into the Enemy Inspector.", this);
         }
 
         if (enemyLight == null)
         {
             Debug.LogError(
-                "[EnemyDetector] Field 'enemyLight' belum diisi. " +
-                "Drag Point Light anak Enemy ke Inspector.", this);
+                "[EnemyDetector] The 'enemyLight' field is empty. " +
+                "Drag the Enemy's child Point Light into the Inspector.", this);
         }
 
-        // Terapkan warna awal supaya tampilan konsisten sejak frame pertama.
+        // Apply the starting color so the visuals match the state from frame one.
         ApplyStateColor(currentState);
     }
 
     /// <summary>
-    /// Menjaga agar radius Alert tidak pernah melebihi radius Suspicious.
-    /// Bila tertukar, state Suspicious tidak akan pernah tercapai.
+    /// Keeps the alert radius from growing past the suspicious radius.
+    /// If they were swapped, the Suspicious state could never be reached.
     /// </summary>
     private void OnValidate()
     {
@@ -130,7 +130,7 @@ public class EnemyDetector : MonoBehaviour
 
     private void Update()
     {
-        // Tanpa referensi Player, perception tidak dapat dijalankan.
+        // Without a Player reference there is nothing to perceive.
         if (player == null)
         {
             return;
@@ -149,8 +149,8 @@ public class EnemyDetector : MonoBehaviour
     }
 
     /// <summary>
-    /// PERCEPTION - membaca informasi dari environment.
-    /// Sensor yang dipakai di praktikum ini adalah jarak.
+    /// PERCEPTION - read information from the environment.
+    /// Distance is the only sensor used here.
     /// </summary>
     private void Perceive()
     {
@@ -158,11 +158,10 @@ public class EnemyDetector : MonoBehaviour
     }
 
     /// <summary>
-    /// DECISION - membandingkan hasil perception dengan parameter AI.
+    /// DECISION - compare what was perceived against the AI parameters.
     ///
-    /// Urutan pemeriksaan penting: radius terkecil diuji lebih dulu,
-    /// karena Player yang berada di dalam alertRadius otomatis juga
-    /// berada di dalam suspiciousRadius.
+    /// Order matters: the smaller radius is tested first, because a Player
+    /// inside the alert radius is necessarily inside the suspicious one too.
     /// </summary>
     private void Decide()
     {
@@ -181,8 +180,8 @@ public class EnemyDetector : MonoBehaviour
             newState = EnemyState.Idle;
         }
 
-        // Hanya bereaksi bila state benar-benar berubah, agar Console
-        // tidak dibanjiri log setiap frame.
+        // React only on a real transition, so the Console is not flooded
+        // with one identical line per frame.
         if (newState != currentState)
         {
             SetState(newState);
@@ -190,7 +189,7 @@ public class EnemyDetector : MonoBehaviour
     }
 
     /// <summary>
-    /// Mencatat state baru lalu menjalankan aksinya.
+    /// Records the new state and runs the action that belongs to it.
     /// </summary>
     private void SetState(EnemyState newState)
     {
@@ -209,7 +208,7 @@ public class EnemyDetector : MonoBehaviour
     }
 
     /// <summary>
-    /// ACTION - respons yang terlihat oleh pemain.
+    /// ACTION - the response the player can actually see.
     /// </summary>
     private void ApplyStateColor(EnemyState state)
     {
@@ -237,7 +236,7 @@ public class EnemyDetector : MonoBehaviour
     }
 
     /// <summary>
-    /// Visualisasi radius deteksi di Scene View.
+    /// Draws the detection radii in the Scene view.
     /// </summary>
     private void OnDrawGizmos()
     {
@@ -253,7 +252,7 @@ public class EnemyDetector : MonoBehaviour
     {
         if (alwaysDrawGizmos)
         {
-            // Sudah digambar oleh OnDrawGizmos, hindari menggambar dua kali.
+            // Already drawn by OnDrawGizmos; avoid drawing twice.
             return;
         }
 
@@ -262,8 +261,7 @@ public class EnemyDetector : MonoBehaviour
 
     private void DrawDetectionGizmos()
     {
-        // Dua lingkaran batas, masing-masing memakai warna state
-        // yang akan aktif bila Player memasukinya.
+        // Each boundary is drawn in the color of the state it triggers.
         Gizmos.color = suspiciousColor;
         Gizmos.DrawWireSphere(transform.position, suspiciousRadius);
 
@@ -275,8 +273,8 @@ public class EnemyDetector : MonoBehaviour
             return;
         }
 
-        // Garis bantu Enemy ke Player, diwarnai sesuai state saat ini
-        // agar hasil keputusan AI langsung terbaca di Scene View.
+        // Line from Enemy to Player, tinted by the current state so the
+        // decision is readable straight from the Scene view.
         Gizmos.color = GetStateColor(currentState);
         Gizmos.DrawLine(transform.position, player.position);
     }

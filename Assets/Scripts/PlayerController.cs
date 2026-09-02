@@ -2,20 +2,21 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Menggerakkan Player dengan WASD / Arrow Key.
-/// Gerakan murni lewat Transform (tanpa Rigidbody) agar sederhana dan stabil.
+/// Moves the Player with WASD or the arrow keys.
+/// Movement is applied directly to the Transform, without a Rigidbody,
+/// to keep the setup simple and predictable.
 /// </summary>
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Kecepatan gerak Player dalam unit per detik.")]
+    [Tooltip("Movement speed in units per second.")]
     private float moveSpeed = 5f;
 
     [Header("Debug (read only)")]
     [SerializeField]
-    [Tooltip("Arah gerak hasil pembacaan input, sudah dinormalisasi.")]
+    [Tooltip("Normalized direction produced by the current input.")]
     private Vector3 moveDirection;
 
     private void Update()
@@ -25,15 +26,15 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Membaca keyboard lalu menyusunnya menjadi satu vektor arah.
-    /// Vektor dinormalisasi agar gerakan diagonal tidak lebih cepat
-    /// daripada gerakan lurus.
+    /// Reads the keyboard and turns it into a single direction vector.
+    /// The vector is normalized so diagonal movement is not faster than
+    /// movement along a single axis.
     /// </summary>
     private void ReadInput()
     {
         Keyboard keyboard = Keyboard.current;
 
-        // Keyboard bisa null bila tidak ada perangkat yang terhubung.
+        // Keyboard can be null when no device is connected.
         if (keyboard == null)
         {
             moveDirection = Vector3.zero;
@@ -63,8 +64,8 @@ public class PlayerController : MonoBehaviour
             vertical += 1f;
         }
 
-        // Bidang gerak adalah XZ. Sumbu Y dibiarkan nol agar Player
-        // tetap menempel pada Ground.
+        // Movement happens on the XZ plane. Y is left at zero so the
+        // Player stays on the Ground.
         moveDirection = new Vector3(horizontal, 0f, vertical);
 
         if (moveDirection.sqrMagnitude > 1f)
@@ -74,8 +75,8 @@ public class PlayerController : MonoBehaviour
     }
 
     /// <summary>
-    /// Menerapkan perpindahan. Dikalikan Time.deltaTime agar kecepatan
-    /// tidak bergantung pada frame rate.
+    /// Applies the movement. Multiplying by Time.deltaTime keeps the speed
+    /// independent of the frame rate.
     /// </summary>
     private void Move()
     {

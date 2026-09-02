@@ -1,54 +1,54 @@
 using UnityEngine;
 
 /// <summary>
-/// Membuat Enemy mondar-mandir di antara dua titik.
+/// Walks the Enemy back and forth between two points.
 ///
-/// Titik patroli dihitung dari posisi awal Enemy saat Play ditekan,
-/// sehingga tidak perlu membuat waypoint object di scene.
+/// The patrol path is derived from wherever the Enemy stands when Play is
+/// pressed, so no waypoint objects are needed in the scene.
 ///
-/// Bila komponen EnemyDetector ikut terpasang, patroli dapat dihentikan
-/// otomatis saat Enemy menyadari kehadiran Player.
+/// When an EnemyDetector is present, patrolling can stop automatically
+/// once the Enemy notices the Player.
 /// </summary>
 [RequireComponent(typeof(EnemyDetector))]
 public class EnemyPatrol : MonoBehaviour
 {
-    [Header("Jalur Patroli")]
+    [Header("Path")]
     [SerializeField]
-    [Tooltip("Perpindahan dari posisi awal menuju titik ujung patroli.")]
+    [Tooltip("Offset from the starting position to the far end of the path.")]
     private Vector3 patrolOffset = new Vector3(0f, 0f, 6f);
 
-    [Header("Gerak")]
+    [Header("Movement")]
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Kecepatan patroli dalam unit per detik.")]
+    [Tooltip("Patrol speed in units per second.")]
     private float moveSpeed = 2f;
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Lama diam di setiap ujung sebelum berbalik, dalam detik.")]
+    [Tooltip("Seconds to pause at each end before turning around.")]
     private float waitTime = 1f;
 
     [SerializeField]
-    [Tooltip("Putar badan Enemy menghadap arah jalannya.")]
+    [Tooltip("Turn the Enemy to face the direction it is walking.")]
     private bool faceMovementDirection = true;
 
     [SerializeField]
     [Min(0f)]
-    [Tooltip("Kecepatan berputar saat berbalik arah, dalam derajat per detik.")]
+    [Tooltip("Turning speed in degrees per second.")]
     private float turnSpeed = 360f;
 
-    [Header("Reaksi terhadap Player")]
+    [Header("Reaction to the Player")]
     [SerializeField]
-    [Tooltip("Hentikan patroli ketika Enemy berada pada state Alert.")]
+    [Tooltip("Stop patrolling while the Enemy is in the Alert state.")]
     private bool haltWhenAlert = true;
 
     [Header("Debug (read only)")]
     [SerializeField]
-    [Tooltip("Titik yang sedang dituju saat ini.")]
+    [Tooltip("Point the Enemy is currently walking towards.")]
     private Vector3 currentTarget;
 
     [SerializeField]
-    [Tooltip("Sisa waktu tunggu di ujung jalur.")]
+    [Tooltip("Remaining pause time at the end of the path.")]
     private float waitTimer;
 
     private EnemyDetector detector;
@@ -62,7 +62,7 @@ public class EnemyPatrol : MonoBehaviour
 
     private void Start()
     {
-        // Posisi saat Play ditekan menjadi salah satu ujung jalur.
+        // The position at the moment Play starts becomes one end of the path.
         pointA = transform.position;
         pointB = pointA + patrolOffset;
 
@@ -86,8 +86,8 @@ public class EnemyPatrol : MonoBehaviour
     }
 
     /// <summary>
-    /// Patroli berhenti saat Enemy sudah menyadari Player, sehingga
-    /// perubahan perilaku terlihat jelas, bukan sekadar berganti warna.
+    /// Patrolling stops once the Enemy is aware of the Player, so the
+    /// behavior change is visible and not just a color swap.
     /// </summary>
     private bool IsHalted()
     {
@@ -113,8 +113,8 @@ public class EnemyPatrol : MonoBehaviour
             currentTarget,
             moveSpeed * Time.deltaTime);
 
-        // Perbandingan jarak dipakai sebagai ambang, karena posisi float
-        // jarang sama persis dengan target.
+        // A distance threshold is used because floating point positions
+        // rarely land exactly on the target.
         if (Vector3.Distance(transform.position, currentTarget) < 0.05f)
         {
             SwitchTarget();
@@ -129,7 +129,7 @@ public class EnemyPatrol : MonoBehaviour
 
     private void RotateTowards(Vector3 direction)
     {
-        // Abaikan komponen vertikal agar Enemy tidak menunduk atau mendongak.
+        // Drop the vertical component so the Enemy does not tilt up or down.
         direction.y = 0f;
 
         if (direction.sqrMagnitude < 0.0001f)
@@ -146,9 +146,9 @@ public class EnemyPatrol : MonoBehaviour
     }
 
     /// <summary>
-    /// Menggambar jalur patroli di Scene View.
-    /// Saat belum Play, jalur dihitung langsung dari posisi Enemy
-    /// supaya bisa diatur tanpa menjalankan game.
+    /// Draws the patrol path in the Scene view. Outside Play mode the path
+    /// is derived from the current position, so it can be tuned without
+    /// running the game.
     /// </summary>
     private void OnDrawGizmos()
     {
