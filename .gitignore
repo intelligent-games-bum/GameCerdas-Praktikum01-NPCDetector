@@ -107,3 +107,6 @@ InitTestScene*.unity*
 
 # Visual Studio Code
 .vscode/
+
+# AGENTS
+.claudeignore
